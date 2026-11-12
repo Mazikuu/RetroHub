@@ -1,0 +1,74 @@
+services:
+  db:
+    image: postgres:16
+    container_name: retrohub_db
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1234"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - retrohub_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  anime-service:
+    build: ./anime_service
+    container_name: retrohub_anime
+    environment:
+      DATABASE_URL: "postgresql://postgres:1234@db:5432/app"
+      PORT: 8001
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./RetroHubMedia:/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - retrohub_network
+
+  game-service:
+    build: ./game_service
+    container_name: retrohub_game
+    environment:
+      DATABASE_URL: "postgresql://postgres:1234@db:5432/app"
+      PORT: 8002
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./RetroHubMedia:/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - retrohub_network
+
+  stream-service:
+    build: ./stream_service
+    container_name: retrohub_stream
+    network_mode: host
+    environment:
+      ANIME_SERVICE_URL: "http://127.0.0.1:8001"
+      GAME_SERVICE_URL: "http://127.0.0.1:8002"
+      HOST_RUNNER_URL: "http://127.0.0.1:9099"
+      PORT: 8000
+    volumes:
+      - ./RetroHubMedia:/media
+      - ./stream_service/static:/app/static
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
+
+networks:
+  retrohub_network:
+    driver: bridge

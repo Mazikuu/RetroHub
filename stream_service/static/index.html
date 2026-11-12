@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>RetroHub Big Picture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #0d0f17; color: #fff; overflow-x: hidden; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #252a3d; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .tabs { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tab { padding: 10px 18px; background: #1a1f30; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; border: 3px solid transparent; user-select: none; }
+  .tab:hover { background: #242b42; }
+  .tab.active { background: #2d4285; border-color: #5b84ff; }
+  .pc-controls { display: flex; align-items: center; gap: 12px; }
+  .pc-controls button { padding: 10px 16px; background: #27ae60; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
+  .pc-controls button:hover { background: #2ecc71; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+  .card { background: #171b29; border-radius: 10px; overflow: hidden; border: 4px solid transparent; transition: transform 0.1s; position: relative; cursor: pointer; }
+  .card:hover, .card.focused { border-color: #00e5ff; transform: scale(1.04); box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); }
+  .card img { width: 100%; height: 220px; object-fit: cover; background: #22283c; display: block; }
+  .card-info { padding: 10px; }
+  .card-title { font-size: 16px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-sub { font-size: 13px; color: #8c96b5; margin-top: 4px; }
+  .upload-btn { margin-top: 8px; width: 100%; padding: 6px; background: #34495e; color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .upload-btn:hover { background: #46627f; }
+  .empty-msg { grid-column: 1 / -1; text-align: center; padding: 50px; color: #8c96b5; font-size: 20px; }
+  #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); padding: 30px; z-index: 100; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; max-width: 700px; margin: 0 auto 20px auto; }
+  .ep-list { display: flex; flex-direction: column; gap: 10px; max-width: 700px; margin: 0 auto; }
+  .ep-item { padding: 14px 20px; background: #1c2235; border-radius: 8px; border: 3px solid transparent; display: flex; justify-content: space-between; font-size: 18px; cursor: pointer; }
+  .ep-item:hover, .ep-item.focused { border-color: #00e5ff; background: #26314d; }
+  .hint { position: fixed; bottom: 10px; right: 20px; background: rgba(0,0,0,0.8); padding: 8px 14px; border-radius: 8px; font-size: 14px; color: #aaa; }
+</style>
+</head>
+<body>
+<header>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="recent">Недавнее</div>
+    <div class="tab" data-tab="anime">Аниме</div>
+    <div class="tab" data-tab="games">Игры</div>
+  </div>
+  <div class="pc-controls">
+    <button onclick="scanLibrary()">Обновить папки</button>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div id="modal">
+  <div class="modal-header">
+    <h2 id="modal-title">Выбор серии</h2>
+    <button onclick="closeModal()" style="padding:8px 16px; font-size:16px; cursor:pointer; background:#c0392b; color:#fff; border:none; border-radius:6px;">⚪: Закрыть</button>
+  </div>
+  <div class="ep-list" id="ep-list"></div>
+</div>
+
+<input type="file" id="cover-input" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
+<div class="hint">🎮 Стик/Крестовина: Выбор | ✖: Открыть | ⚪: Назад | L1/R1: Вкладки</div>
+
+<script>
+let data = { anime: new Array(), games: new Array() };
+let currentTab = 'recent', focusIdx = 0, modalOpen = false, modalFocusIdx = 0;
+let currentSeries = null, uploadTarget = null;
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/library');
+    data = await res.json();
+    render();
+  } catch (e) { console.error("Ошибка загрузки:", e); }
+}
+
+async function scanLibrary() {
+  await fetch('/api/scan', { method: 'POST' });
+  await loadData();
+}
+
+function getItems() {
+  const allAnime = (data.anime || new Array()).map(a => Object.assign({}, a, { type: 'anime', sortDate: a.last_watched_at || '' }));
+  const allGames = (data.games || new Array()).map(g => Object.assign({}, g, { type: 'game', sortDate: g.last_played_at || '' }));
+  const combined = allAnime.concat(allGames);
+  if (currentTab === 'anime') return allAnime;
+  if (currentTab === 'games') return allGames;
+  if (currentTab === 'recent') {
+    const rec = combined.filter(i => i.sortDate).sort((a, b) => b.sortDate.localeCompare(a.sortDate));
+    return rec.length > 0 ? rec : combined;
+  }
+  return combined;
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  const items = getItems();
+  if (focusIdx >= items.length) focusIdx = Math.max(0, items.length - 1);
+  if (items.length === 0) {
+    grid.innerHTML = '<div class="empty-msg">Здесь пока пусто. Закинь файлы в RetroHubMedia и нажми «Обновить папки»</div>';
+    return;
+  }
+  grid.innerHTML = items.map((item, idx) => {
+    const img = item.cover_url || 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" width="200" height="250"><rect width="100%" height="100%" fill="%2322283c"/><text x="50%" y="50%" fill="%238c96b5" font-size="18" text-anchor="middle">Нет обложки</text></svg>';
+    const sub = item.type === 'anime' ? 'Серий: ' + item.episodes.length : item.platform;
+    return `<div class="card ${idx === focusIdx ? 'focused' : ''}" onclick="activateItem(${idx})">
+      <img src="${img}">
+      <div class="card-info">
+        <div class="card-title">${item.title}</div>
+        <div class="card-sub">${sub}</div>
+        <button class="upload-btn" onclick="event.stopPropagation(); triggerUpload('${item.type}', ${item.id})">🖼 Обложка</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function activateItem(idx) {
+  focusIdx = idx;
+  const item = getItems().at(idx);
+  if (!item) return;
+  if (item.type === 'game') {
+    fetch('/stream/play-game?id=' + item.id, { method: 'POST' });
+  } else {
+    currentSeries = item; modalOpen = true; modalFocusIdx = 0;
+    document.getElementById('modal-title').innerText = item.title;
+    renderModal();
+    document.getElementById('modal').style.display = 'block';
+  }
+}
+
+function renderModal() {
+  document.getElementById('ep-list').innerHTML = currentSeries.episodes.map((ep, idx) => {
+    const min = Math.floor(ep.playback_position / 60);
+    const status = ep.playback_position > 0 ? 'Продолжить с ' + min + ' мин.' : (ep.is_watched ? 'Просмотрено' : 'Новая');
+    return `<div class="ep-item ${idx === modalFocusIdx ? 'focused' : ''}" onclick="playEpisode(${ep.id})">
+      <span>Серия ${ep.episode_number}: ${ep.title}</span>
+      <span style="color:#5b84ff">${status}</span>
+    </div>`;
+  }).join('');
+}
+
+function playEpisode(epId) { fetch('/stream/play-anime?id=' + epId, { method: 'POST' }); }
+function closeModal() { modalOpen = false; document.getElementById('modal').style.display = 'none'; loadData(); }
+function triggerUpload(type, id) { uploadTarget = { type, id }; document.getElementById('cover-input').click(); }
+
+async function handleCoverUpload(e) {
+  const file = e.target.files.item(0);
+  if (!file || !uploadTarget) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  await fetch('/api/cover/' + uploadTarget.type + '/' + uploadTarget.id, { method: 'POST', body: formData });
+  loadData();
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentTab = t.dataset.tab;
+    focusIdx = 0;
+    render();
+  };
+});
+
+let lastMove = 0;
+function pollGamepad() {
+  const gps = navigator.getGamepads ? navigator.getGamepads() : new Array();
+  let gp = null;
+  for (let i = 0; i < gps.length; i++) { if (gps.item(i)) { gp = gps.item(i); break; } }
+  const now = Date.now();
+  if (gp && now - lastMove > 180) {
+    const axX = gp.axes.at(0) || 0, axY = gp.axes.at(1) || 0;
+    const btn = (n) => gp.buttons.at(n) && gp.buttons.at(n).pressed;
+    const up = btn(12) || axY < -0.5, down = btn(13) || axY > 0.5, left = btn(14) || axX < -0.5, right = btn(15) || axX > 0.5;
+    const cross = btn(0), circle = btn(1), l1 = btn(4), r1 = btn(5);
+    if (modalOpen) {
+      if (up && modalFocusIdx > 0) { modalFocusIdx--; renderModal(); lastMove = now; }
+      if (down && modalFocusIdx < currentSeries.episodes.length - 1) { modalFocusIdx++; renderModal(); lastMove = now; }
+      if (cross && currentSeries.episodes.at(modalFocusIdx)) { playEpisode(currentSeries.episodes.at(modalFocusIdx).id); lastMove = now + 300; }
+      if (circle) { closeModal(); lastMove = now; }
+    } else {
+      const items = getItems();
+      if (right && focusIdx < items.length - 1) { focusIdx++; render(); lastMove = now; }
+      if (left && focusIdx > 0) { focusIdx--; render(); lastMove = now; }
+      if (down && focusIdx + 4 < items.length) { focusIdx += 4; render(); lastMove = now; }
+      if (up && focusIdx - 4 >= 0) { focusIdx -= 4; render(); lastMove = now; }
+      if (cross && items.at(focusIdx)) { activateItem(focusIdx); lastMove = now + 300; }
+      if (l1 || r1) {
+        const tabs = Array.of('recent', 'anime', 'games');
+        let idx = tabs.indexOf(currentTab);
+        idx = r1 ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+        document.querySelector('.tab[data-tab="' + tabs.at(idx) + '"]').click();
+        lastMove = now + 100;
+      }
+    }
+  }
+  requestAnimationFrame(pollGamepad);
+}
+loadData(); pollGamepad();
+</script>
+</body>
+</html>
