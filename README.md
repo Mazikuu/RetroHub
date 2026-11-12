@@ -14,7 +14,7 @@
 ---------------------
 
 ## Структура проекта
-
+```
 ~/RetroHub/
   docker-compose.yml         Описание 3 микросервисов и БД PostgreSQL 16
   start.sh                   Единый скрипт запуска всея системы
@@ -26,7 +26,7 @@
   anime_service/             Микросервис управления аниме (Dockerfile + main.py)
   game_service/              Микросервис управления играми (Dockerfile + main.py)
   stream_service/            Оркестратор и фронтенд (Dockerfile + main.py + static/)
-
+```
 
 -----------------------
 
