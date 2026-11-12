@@ -1,6 +1,6 @@
 # RetroHub - Лаунчер для ретро-гейминга и аниме
 
-**RetroHub** — это микросервисная система с веб-интерфейсом в стиле *Steam Big Picture*, разработанная для управления коллекцией ретро-аниме и консольных игр (Sega, NES, PS1) на Linux-хосте (Manjaro Linux KDE Plasma) с выводом сигнала в формате 4:3 на аналоговый ЭЛТ-телевизор
+Это микросервисная система с веб-интерфейсом в стиле *Steam Big Picture*, разработанная для управления коллекцией ретро-аниме и консольных игр (Sega, NES, PS1) на Linux-хосте (Manjaro Linux KDE Plasma) с выводом сигнала в формате 4:3 на аналоговый ЭЛТ-телевизор
 
 ----------------------
 
@@ -13,19 +13,19 @@
 
 ---------------------
 
-## 📁 Структура проекта
+## Структура проекта
 
 ~/RetroHub/
-├── docker-compose.yml         Описание 3 микросервисов и БД PostgreSQL 16
-├── start.sh                   Единый скрипт запуска всея системы
-├── host_runner.py             Локальный агент запуска mpv и RetroArch
-├── RetroHubMedia/             Медиабиблиотека (пробрасывается в Docker как /media)
-│   ├── anime/                 Папки с аниме (например, Cowboy Bebop/01.mkv)
-│   ├── roms/                  Игры по папкам: sega/, nes/, ps1/
-│   └── covers/                Загруженные постеры
-├── anime_service/             Микросервис управления аниме (Dockerfile + main.py)
-├── game_service/              Микросервис управления играми (Dockerfile + main.py)
-└── stream_service/            Оркестратор и фронтенд (Dockerfile + main.py + static/)
+  docker-compose.yml         Описание 3 микросервисов и БД PostgreSQL 16
+  start.sh                   Единый скрипт запуска всея системы
+  host_runner.py             Локальный агент запуска mpv и RetroArch
+  RetroHubMedia/             Медиабиблиотека (пробрасывается в Docker как /media)
+    anime/                   Папки с аниме (например, Cowboy Bebop/01.mkv)
+    roms/                    Игры по папкам: sega/, nes/, ps1/
+    covers/                  Загруженные постеры
+  anime_service/             Микросервис управления аниме (Dockerfile + main.py)
+  game_service/              Микросервис управления играми (Dockerfile + main.py)
+  stream_service/            Оркестратор и фронтенд (Dockerfile + main.py + static/)
 
 
 -----------------------
