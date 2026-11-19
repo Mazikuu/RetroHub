@@ -9,23 +9,24 @@
 - База данных и ORM: PostgreSQL 16, SQLAlchemy
 - Контейнеризация и оркестрация: Docker, Docker Compose
 - Frontend (Big Picture UI): HTML5, CSS3, Vanilla JS + Web Gamepad API
-- Воспроизведение на хосте: `mpv` (плеер), `RetroArch` (эмулятор консосей), `python-evdev` (перехват событий геймпада на уровне ядра Linux)
+- Воспроизведение на хосте: `mpv` (плеер), `RetroArch` (эмулятор консосей)
 
 ---------------------
 
 ## Структура проекта
 ```
-~/RetroHub/
+~/RetroHub
   docker-compose.yml         Описание 3 микросервисов и БД PostgreSQL 16
   start.sh                   Единый скрипт запуска всея системы
   host_runner.py             Локальный агент запуска mpv и RetroArch
-  RetroHubMedia/             Медиабиблиотека (пробрасывается в Docker как /media)
-    anime/                   Папки с аниме (например, Cowboy Bebop/01.mkv)
-    roms/                    Игры по папкам: sega/, nes/, ps1/
-    covers/                  Загруженные постеры
-  anime_service/             Микросервис управления аниме (Dockerfile + main.py)
-  game_service/              Микросервис управления играми (Dockerfile + main.py)
-  stream_service/            Оркестратор и фронтенд (Dockerfile + main.py + static/)
+  RetroHubMedia              Медиабиблиотека (пробрасывается в Docker как /media)
+    anime                    Папки с аниме (например, Cowboy Bebop/01.mkv)
+    roms                     Игры по папкам: sega/, nes/, ps1/
+    covers                   Загруженные постеры
+  anime_service              Микросервис управления аниме (Dockerfile + main.py)
+  game_service               Микросервис управления играми (Dockerfile + main.py)
+  stream_service             Оркестратор и фронтенд (Dockerfile + main.py + static/)
+  platforms.json             Описания платформ и эмуляторов
 ```
 
 -----------------------
@@ -40,17 +41,9 @@
 (Для полной остановки всех сервисов нажмите `Ctrl + C` в терминале)
 
 ###  Добавление нового контента
-1. Положите папку с новым аниме в `~/RetroHub/RetroHubMedia/anime/` или ROM-файл игры в `~/RetroHub/RetroHubMedia/roms/sega/` (или `nes`, `ps1`)
+1. Положите папку с новым аниме в `~/RetroHub/RetroHubMedia/anime/` или файл игры в `~/RetroHub/RetroHubMedia/roms/[папка платформы]/`
 2. Откройте в браузере `http://localhost:8000` и нажмите кнопку "Обновить папки"
 3. Для большего стиля можете добавить обложку к карточке. (Кнопка "Обложка")
-
-### Управление с геймпада
-- Крестовина / Левый стик: перемещение по сетке карточек и списку серий
-- Крестик: открыть список серий / запустить игру
-- Круг: вернуться назад / закрыть список серий
-- Треугольник: добавить или убрать из вкладки «Избранное»
-- L1 / R1: переключение вкладок («Недавнее», «Избранное», «Аниме», «Игры»)
-- Select + Start: закрыть плеер (`mpv`) или эмулятор (`RetroArch`) и вернуться в меню RetroHub
 
 ----------------------
 
