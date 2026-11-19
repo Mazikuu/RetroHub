@@ -28,6 +28,7 @@ services:
       - "8001:8001"
     volumes:
       - ./RetroHubMedia:/media
+      - ./platforms.json:/app/platforms.json
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +45,7 @@ services:
       - "8002:8002"
     volumes:
       - ./RetroHubMedia:/media
+      - ./platforms.json:/app/platforms.json
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +63,7 @@ services:
       PORT: 8000
     volumes:
       - ./RetroHubMedia:/media
+      - ./platforms.json:/app/platforms.json
       - ./stream_service/static:/app/static
     depends_on:
       db:

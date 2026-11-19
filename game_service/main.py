@@ -1,4 +1,4 @@
-import os, shutil
+import os, json, shutil
 from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
@@ -8,6 +8,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@db:5432/app")
 PORT = int(os.getenv("PORT", 8002))
 MEDIA_ROOT = "/media"
+PLATFORMS_FILE = "/app/platforms.json"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -31,30 +32,44 @@ def get_db():
     try: yield db
     finally: db.close()
 
+def load_platforms():
+    if os.path.exists(PLATFORMS_FILE):
+        with open(PLATFORMS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
 @app.post("/games/scan")
 def scan_games(db: Session = Depends(get_db)):
     roms_dir = os.path.join(MEDIA_ROOT, "roms")
+    platforms = load_platforms()
     added = 0
-    for platform in ("sega", "nes", "ps1"):
+    for platform, cfg in platforms.items():
         p_dir = os.path.join(roms_dir, platform)
-        if not os.path.exists(p_dir): continue
-        for fname in sorted(os.listdir(p_dir)):
-            fpath = os.path.join(p_dir, fname)
-            if not os.path.isfile(fpath): continue
-            if not db.query(RetroGame).filter(RetroGame.rom_file_path == fpath).first():
-                title, _ = os.path.splitext(fname)
-                db.add(RetroGame(title=title, platform=platform.upper(), rom_file_path=fpath))
-                added += 1
+        if not os.path.exists(p_dir):
+            continue
+        ignore_exts = tuple(cfg.get("ignore_exts", ()))
+        for root, _, files in os.walk(p_dir):
+            for fname in sorted(files):
+                if fname.lower().endswith(ignore_exts):
+                    continue
+                fpath = os.path.join(root, fname)
+                if not db.query(RetroGame).filter(RetroGame.rom_file_path == fpath).first():
+                    title, _ = os.path.splitext(fname)
+                    db.add(RetroGame(title=title, platform=platform.upper(), rom_file_path=fpath))
+                    added += 1
     db.commit()
     return {"status": "ok", "added_games": added}
 
 @app.get("/games")
 def list_games(db: Session = Depends(get_db)):
-    return list({
-        "id": g.id, "title": g.title, "platform": g.platform, "rom_file_path": g.rom_file_path,
-        "cover_url": g.cover_url, "is_favorite": g.is_favorite,
-        "last_played_at": g.last_played_at.isoformat() if g.last_played_at else None
-    } for g in db.query(RetroGame).all())
+    res = list()
+    for g in db.query(RetroGame).all():
+        res.append({
+            "id": g.id, "title": g.title, "platform": g.platform, "rom_file_path": g.rom_file_path,
+            "cover_url": g.cover_url, "is_favorite": g.is_favorite,
+            "last_played_at": g.last_played_at.isoformat() if g.last_played_at else None
+        })
+    return res
 
 @app.get("/games/{game_id}")
 def get_game(game_id: int, db: Session = Depends(get_db)):
@@ -63,14 +78,6 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
     g.last_played_at = datetime.utcnow()
     db.commit()
     return {"id": g.id, "title": g.title, "platform": g.platform, "rom_file_path": g.rom_file_path}
-
-@app.post("/games/{game_id}/favorite")
-def toggle_favorite(game_id: int, db: Session = Depends(get_db)):
-    g = db.query(RetroGame).filter(RetroGame.id == game_id).first()
-    if not g: raise HTTPException(404, "Игра не найдена")
-    g.is_favorite = not g.is_favorite
-    db.commit()
-    return {"is_favorite": g.is_favorite}
 
 @app.post("/games/{game_id}/cover")
 def upload_cover(game_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):

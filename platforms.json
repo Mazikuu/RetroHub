@@ -1,0 +1,27 @@
+{
+  "sega": {
+    "type": "retroarch",
+    "core": "genesis_plus_gx_libretro.so",
+    "ignore_exts": [".txt", ".jpg", ".png"]
+  },
+  "nes": {
+    "type": "retroarch",
+    "core": "fceumm_libretro.so",
+    "ignore_exts": [".txt", ".jpg", ".png"]
+  },
+  "ps1": {
+    "type": "retroarch",
+    "core": "pcsx_rearmed_libretro.so",
+    "ignore_exts": [".bin", ".raw", ".txt", ".jpg", ".png"]
+  },
+  "dreamcast": {
+    "type": "retroarch",
+    "core": "flycast_libretro.so",
+    "ignore_exts": [".bin", ".raw", ".txt", ".cue", ".jpg", ".png"]
+  },
+  "ps2": {
+    "type": "command",
+    "cmd": ["flatpak", "run", "net.pcsx2.PCSX2", "-fullscreen", "{rom}"],
+    "ignore_exts": [".bin", ".raw", ".txt", ".jpg", ".png"]
+  }
+}

@@ -16,6 +16,7 @@ sleep 2
 echo "4. Открываем окно RetroHub Big Picture на ЭЛТ-телевизоре..."
 mkdir -p /tmp/retrohub-firefox
 firefox --profile /tmp/retrohub-firefox --no-remote --kiosk "http://localhost:8000" &
+BROWSER_PID=$!
 sleep 3
 qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Window to Previous Screen" 2>/dev/null
 
@@ -23,5 +24,5 @@ echo "====================================================="
 echo "RetroHub запущен! Для остановки нажми Ctrl + C"
 echo "====================================================="
 
-trap "echo 'Останавливаем систему...'; kill $RUNNER_PID 2>/dev/null; docker compose stop; exit" INT
+trap "echo 'Останавливаем систему...'; kill $BROWSER_PID $RUNNER_PID 2>/dev/null; docker compose stop; exit" INT
 wait $RUNNER_PID
